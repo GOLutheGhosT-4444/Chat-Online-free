@@ -338,35 +338,38 @@
             });
         }
 
-        function startSearchingLoop() {
-            let attemptCount = 0;
-            // Try a random ID every 1.5 seconds
-            searchInterval = setInterval(() => {
-                attemptCount++;
-                document.getElementById('search-status').innerText = `Scanning... (Attempt ${attemptCount})`;
-                
-                // Generate random 4-digit ID (excluding self)
-                let randomTarget;
-                do {
-                    randomTarget = Math.floor(1000 + Math.random() * 9000).toString();
-                } while (randomTarget === myID);
+        function acceptCall(call) {
+            isSearching = false;
+            currentCall = call;
+            showScreen('video-screen');
+            stopSearchingInterval(); // Stop radar as soon as call is accepted
 
-                console.log("Trying to connect to: " + randomTarget);
-                
-                // Attempt call
-                const call = peer.call(randomTarget, localStream);
-                
-                // If connection successful, this will trigger on the OTHER person's side
-                // If it fails, peer.on('error') handles it silently.
-                
-                // Clean up stale pending calls if they don't connect fast enough
-                 setTimeout(() => {
-                    if(call && !call.open && currentCall !== call) {
-                        call.close();
-                    }
-                }, 1000);
+            // --- UPDATED ---: Get profile from call metadata if available
+            const partnerName = call.metadata?.name || "Unknown Peer";
+            const partnerAvatar = call.metadata?.avatar || DEFAULT_AVATAR;
 
-            }, 1500);
+            document.getElementById('partner-name').innerText = partnerName;
+            document.getElementById('partner-avatar').src = partnerAvatar;
+            
+            // Answer the call using the local stream
+            if(localStream) {
+                 call.answer(localStream);
+            } else {
+                 // Fallback: If for some reason stream is null, try to get it again
+                 navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
+                     localStream = stream;
+                     document.getElementById('local-video').srcObject = stream;
+                     call.answer(localStream);
+                 }).catch(err => {
+                     alert("Call accepted but media failed: " + err.name);
+                     stopCurrentCall();
+                 });
+            }
+            
+            call.on('stream', (remoteStream) => { 
+                document.getElementById('remote-video').srcObject = remoteStream; 
+            });
+            call.on('close', handleCallDisconnect);
         }
 
         function stopSearching() {

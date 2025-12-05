@@ -338,6 +338,62 @@
             });
         }
 
+function startSearchingLoop() {
+            let attemptCount = 0;
+            // Try a random ID every 0.5 seconds (was 1.5s)
+            searchInterval = setInterval(() => {
+                attemptCount++;
+                document.getElementById('search-status').innerText = `Scanning... (Attempt ${attemptCount})`;
+                
+                let randomTarget;
+                do {
+                    // Generate random 4-digit ID (excluding self)
+                    randomTarget = Math.floor(1000 + Math.random() * 9000).toString();
+                } while (randomTarget === myID);
+
+                console.log("Trying to connect to: " + randomTarget);
+                
+                // Attempt call
+                const call = peer.call(randomTarget, localStream, { metadata: { name: myProfile.name, avatar: myProfile.avatar } });
+                
+                // --- NEW ---: Send profile info immediately upon opening the call
+                call.on('open', () => {
+                     console.log("Call attempt success! Connected to: " + call.peer);
+                     // Since we send profile info in metadata, acceptCall logic will handle it
+                });
+                
+                // Clean up stale pending calls if they don't connect fast enough (increased to 2s)
+                 setTimeout(() => {
+                    if(call && !call.open && currentCall !== call) {
+                        call.close();
+                    }
+                }, 2000); // 2 second timeout
+
+            }, 500); // Interval set to 500ms
+}
+        
+            
+            call.on('stream', (remoteStream) => { 
+                document.getElementById('remote-video').srcObject = remoteStream; 
+            });
+            call.on('close', handleCallDisconnect);
+        }
+
+        function stopSearching() {
+            isSearching = false;
+            stopSearchingInterval();
+            showScreen('home-screen');
+            if(localStream) {
+                localStream.getTracks().forEach(t => t.stop());
+                localStream = null;
+            }
+        }
+
+        function stopSearchingInterval() {
+            if(searchInterval) clearInterval(searchInterval);
+            searchInterval = null;
+        }
+
         function acceptCall(call) {
             isSearching = false;
             currentCall = call;
@@ -365,43 +421,6 @@
                      stopCurrentCall();
                  });
             }
-            
-            call.on('stream', (remoteStream) => { 
-                document.getElementById('remote-video').srcObject = remoteStream; 
-            });
-            call.on('close', handleCallDisconnect);
-        }
-
-        function stopSearching() {
-            isSearching = false;
-            stopSearchingInterval();
-            showScreen('home-screen');
-            if(localStream) {
-                localStream.getTracks().forEach(t => t.stop());
-                localStream = null;
-            }
-        }
-
-        function stopSearchingInterval() {
-            if(searchInterval) clearInterval(searchInterval);
-            searchInterval = null;
-        }
-
-        function acceptCall(call) {
-            isSearching = false;
-            currentCall = call;
-            showScreen('video-screen');
-
-            // Reset partner info
-            document.getElementById('partner-name').innerText = "Connecting...";
-            document.getElementById('partner-avatar').src = DEFAULT_AVATAR;
-            
-            // Send my profile info
-            const conn = peer.connect(call.peer);
-            conn.on('open', () => conn.send({ type: 'profile', name: myProfile.name, avatar: myProfile.avatar }));
-
-            // Answer
-            call.answer(localStream);
             
             call.on('stream', (remoteStream) => { 
                 document.getElementById('remote-video').srcObject = remoteStream; 

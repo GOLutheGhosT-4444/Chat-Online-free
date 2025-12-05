@@ -3,630 +3,394 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NeonChat - Random Video</title>
+    <title>WhatsApp Call - Mobile</title>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
     
     <style>
         :root {
-            --bg-dark: #050a10;
-            --glass-bg: rgba(20, 30, 45, 0.6);
-            --glass-border: rgba(255, 255, 255, 0.1);
-            --neon-cyan: #00fff2;
-            --neon-pink: #ff00ff;
-            --text-primary: #ffffff;
-            --text-secondary: #a0aab8;
+            --bg-color: #111b21;
+            --header-color: #202c33;
+            --accent-color: #00a884;
+            --text-primary: #e9edef;
+            --text-secondary: #8696a0;
+            --incoming-bg: #0b141a;
         }
-
-        * { box-sizing: border-box; }
-
         body {
-            background-color: var(--bg-dark);
-            background-image: 
-                radial-gradient(circle at 20% 30%, rgba(0, 255, 242, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 80% 70%, rgba(255, 0, 255, 0.15) 0%, transparent 50%);
+            background-color: var(--bg-color);
             color: var(--text-primary);
-            font-family: 'Roboto', sans-serif;
-            margin: 0; height: 100vh; overflow: hidden;
-            display: flex; flex-direction: column;
+            font-family: Helvetica, Arial, sans-serif;
+            margin: 0; height: 100vh; display: flex; flex-direction: column;
+            user-select: none;
         }
 
-        /* --- ANIMATIONS --- */
-        @keyframes pulse-neon {
-            0% { box-shadow: 0 0 10px var(--neon-cyan), 0 0 20px var(--neon-cyan); }
-            50% { box-shadow: 0 0 25px var(--neon-cyan), 0 0 40px var(--neon-cyan); }
-            100% { box-shadow: 0 0 10px var(--neon-cyan), 0 0 20px var(--neon-cyan); }
-        }
-        @keyframes scan {
-            0% { transform: translateY(-100%); }
-            100% { transform: translateY(100vh); }
-        }
-        @keyframes rotate-radar {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* --- COMMON UI --- */
-        .glass-panel {
-            background: var(--glass-bg);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
-            border: 1px solid var(--glass-border);
-            border-radius: 20px;
-        }
-
-        .btn-neon {
-            background: transparent;
-            border: 2px solid var(--neon-cyan);
-            color: var(--neon-cyan);
-            padding: 15px 40px;
-            font-size: 18px;
-            font-family: 'Orbitron', sans-serif;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            border-radius: 50px;
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-            transition: all 0.3s ease;
-            box-shadow: 0 0 10px rgba(0, 255, 242, 0.3);
-        }
-        .btn-neon:hover {
-            background: var(--neon-cyan);
-            color: var(--bg-dark);
-            box-shadow: 0 0 30px var(--neon-cyan);
-        }
-        .btn-neon.pink {
-            border-color: var(--neon-pink); color: var(--neon-pink);
-            box-shadow: 0 0 10px rgba(255, 0, 255, 0.3);
-        }
-        .btn-neon.pink:hover {
-            background: var(--neon-pink); color: var(--bg-dark);
-            box-shadow: 0 0 30px var(--neon-pink);
-        }
-        .btn-neon:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            box-shadow: none;
-        }
-
-        /* --- HEADER --- */
+        /* HEADER & PROFILE */
         .header {
-            padding: 20px; display: flex; justify-content: space-between; align-items: center;
-            z-index: 10;
+            background-color: var(--header-color); padding: 15px;
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2); font-weight: bold; font-size: 20px; color: var(--text-secondary);
         }
-        .logo { font-family: 'Orbitron', sans-serif; font-size: 24px; font-weight: 700; background: linear-gradient(to right, var(--neon-cyan), var(--neon-pink)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .header span { color: var(--text-primary); }
         
-        .my-profile-chip {
-            display: flex; align-items: center; padding: 8px 15px;
-            border-radius: 30px; cursor: pointer; gap: 10px;
+        .profile-summary {
+            display: flex; align-items: center; padding: 15px; background: var(--header-color);
+            margin: 10px; border-radius: 10px; border: 1px solid #333; cursor: pointer;
         }
-        .my-avatar-tiny { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 2px solid var(--neon-pink); }
-
-        /* --- SCREENS --- */
-        .screen {
-            flex: 1; display: flex; flex-direction: column;
-            justify-content: center; align-items: center;
-            position: relative; transition: opacity 0.5s ease;
+        .my-avatar-small {
+            width: 50px; height: 50px; border-radius: 50%; object-fit: cover; margin-right: 15px; background: #555;
         }
-        #home-screen { text-align: center; padding: 30px; }
-        #searching-screen, #video-screen { display: none; }
 
-        /* --- HOME SCREEN --- */
-        .hero-text { font-size: 32px; margin-bottom: 10px; font-family: 'Orbitron', sans-serif; }
-        .hero-sub { color: var(--text-secondary); margin-bottom: 50px; }
+        /* RECENT CALLS LIST */
+        #recent-list { flex: 1; overflow-y: auto; }
+        .call-item {
+            display: flex; align-items: center; padding: 15px;
+            cursor: pointer; border-bottom: 1px solid #202c33;
+        }
+        .call-item:active { background-color: #202c33; }
+        .avatar-img {
+            width: 50px; height: 50px; border-radius: 50%; object-fit: cover; margin-right: 15px; background: #333;
+        }
+        .info { flex: 1; }
+        .name-row { display: flex; justify-content: space-between; }
+        .name { font-size: 17px; font-weight: 500; margin-bottom: 4px; color: var(--text-primary); }
+        .status-dot { width: 10px; height: 10px; background: gray; border-radius: 50%; display: inline-block; margin-right: 5px; }
+        .status-dot.online { background: #00a884; box-shadow: 0 0 5px #00a884; }
         
-        .warning-box {
-            background: rgba(255, 193, 7, 0.2);
-            border: 1px solid rgba(255, 193, 7, 0.5);
-            border-radius: 15px;
-            padding: 20px;
-            margin: 20px 0;
-            text-align: center;
-            color: #fff;
-        }
-        
-        /* --- SEARCHING SCREEN --- */
-        .radar-container {
-            width: 200px; height: 200px; position: relative;
-            margin-bottom: 40px;
-        }
-        .radar-circles {
-            position: absolute; width: 100%; height: 100%;
-            border: 2px solid rgba(0, 255, 242, 0.3); border-radius: 50%;
-        }
-        .radar-circles::before {
-            content: ''; position: absolute; top: 50%; left: 50%;
-            width: 60%; height: 60%; transform: translate(-50%, -50%);
-            border: 2px solid rgba(0, 255, 242, 0.5); border-radius: 50%;
-        }
-        .radar-scanner {
-            position: absolute; width: 100%; height: 100%;
-            background: conic-gradient(from 0deg, transparent 0deg, rgba(0, 255, 242, 0.4) 60deg, transparent 60deg);
-            border-radius: 50%; animation: rotate-radar 3s linear infinite;
-        }
-        .searching-text { font-size: 24px; font-family: 'Orbitron', sans-serif; animation: pulse-neon 2s infinite alternate; }
+        .time { font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; }
+        .call-icon { color: var(--accent-color); font-size: 24px; }
 
-        /* --- VIDEO SCREEN --- */
-        #video-screen { background: #000; }
-        video { width: 100%; height: 100%; object-fit: cover; }
-        #remote-video { position: absolute; top: 0; left: 0; z-index: 1; }
-        #local-video { 
-            position: absolute; bottom: 100px; right: 20px; width: 100px; height: 140px; 
-            background: #333; border-radius: 15px; border: 2px solid var(--neon-cyan); 
-            transform: scaleX(-1); z-index: 2; box-shadow: 0 0 20px rgba(0, 255, 242, 0.3);
-        }
-        
-        .partner-info-overlay {
-            position: absolute; top: 20px; left: 20px; z-index: 3;
-            display: flex; align-items: center; gap: 15px; padding: 15px;
-        }
-        .partner-avatar-large { width: 60px; height: 60px; border-radius: 50%; border: 3px solid var(--neon-pink); }
-
-        .video-controls {
-            position: absolute; bottom: 30px; width: 100%; z-index: 3;
-            display: flex; justify-content: center; gap: 20px;
-        }
-        .control-btn {
-            width: 70px; height: 70px; border-radius: 50%; border: none;
+        /* FAB & MODALS */
+        .fab {
+            position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px;
+            background-color: var(--accent-color); border-radius: 50%;
             display: flex; justify-content: center; align-items: center;
-            font-size: 30px; cursor: pointer; color: white;
-            backdrop-filter: blur(10px); transition: all 0.3s;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4); cursor: pointer; z-index: 20;
         }
-        .btn-stop { background: rgba(244, 67, 54, 0.8); border: 2px solid #ff3333; }
-        .btn-next { background: rgba(0, 255, 242, 0.8); border: 2px solid var(--neon-cyan); color: var(--bg-dark); }
-        .control-btn:hover { transform: scale(1.1); }
+        .fab i { color: white; font-size: 28px; }
 
-        /* --- PROFILE MODAL --- */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8); z-index: 100; display: none; 
-            justify-content: center; align-items: center; backdrop-filter: blur(10px);
+            background: rgba(0,0,0,0.8); z-index: 100; display: none; justify-content: center; align-items: center;
         }
-        .modal-box { 
-            width: 90%; max-width: 400px; padding: 30px; text-align: center;
-            display: flex; flex-direction: column; align-items: center;
+        .modal-box { background: var(--header-color); padding: 25px; width: 85%; max-width: 400px; border-radius: 15px; text-align: center; display: flex; flex-direction: column; align-items: center;}
+        
+        input { 
+            width: 100%; padding: 12px; background: #2a3942; border: none; 
+            color: white; border-radius: 8px; margin: 10px 0; font-size: 16px; 
+            box-sizing: border-box; text-align: center;
         }
-        .avatar-preview { width: 100px; height: 100px; border-radius: 50%; margin-bottom: 20px; border: 3px solid var(--neon-cyan); object-fit: cover; }
-        input.neon-input {
-            width: 100%; padding: 15px; margin: 10px 0;
-            background: rgba(255,255,255,0.1); border: 1px solid var(--neon-cyan);
-            color: white; border-radius: 10px; text-align: center; font-size: 16px;
-            outline: none; transition: all 0.3s;
+        
+        /* New Styles for File Picker */
+        .avatar-preview-box {
+            width: 80px; height: 80px; border-radius: 50%; background: #333; margin-bottom: 10px;
+            object-fit: cover; border: 2px solid var(--accent-color);
         }
-        input.neon-input:focus { box-shadow: 0 0 15px var(--neon-cyan); }
+        .file-label {
+            background: #2a3942; color: var(--text-primary); padding: 8px 15px; border-radius: 20px;
+            font-size: 14px; cursor: pointer; margin-bottom: 15px; display: inline-block;
+        }
 
-        /* Permission Status Indicator */
-        .permission-status {
-            position: fixed; top: 10px; right: 10px; z-index: 1000;
-            padding: 8px 12px; border-radius: 20px; font-size: 12px;
-            font-family: 'Orbitron', sans-serif;
+        .modal-btn { padding: 10px 25px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 16px; margin: 5px; width: 100px;}
+        .btn-primary { background: var(--accent-color); color: white; }
+        .btn-cancel { background: transparent; color: var(--text-secondary); }
+
+        /* INCOMING & VIDEO SCREENS */
+        #video-screen, #incoming-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: black; z-index: 200; display: none;
         }
-        .status-granted { background: rgba(76, 175, 80, 0.9); color: white; }
-        .status-denied { background: rgba(244, 67, 54, 0.9); color: white; }
-        .status-pending { background: rgba(255, 193, 7, 0.9); color: #333; }
+        video { width: 100%; height: 100%; object-fit: cover; }
+        #local-video { position: absolute; bottom: 120px; right: 20px; width: 100px; height: 150px; background: #333; border-radius: 10px; border: 2px solid white; transform: scaleX(-1); }
+        .controls { position: absolute; bottom: 30px; width: 100%; display: flex; justify-content: center; gap: 30px; }
+        .ctrl-btn { width: 60px; height: 60px; border-radius: 50%; border: none; font-size: 28px; display: flex; justify-content: center; align-items: center; cursor: pointer; color: white; }
+        .btn-end { background: #f44336; }
+        
+        #incoming-screen { background: var(--incoming-bg); flex-direction: column; align-items: center; justify-content: center; }
+        .avatar-large { 
+            width: 120px; height: 120px; border-radius: 50%; margin-bottom: 20px; object-fit: cover;
+            border: 2px solid var(--accent-color); animation: pulse 1.5s infinite; 
+        }
+        @keyframes pulse { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 168, 132, 0.7); } 70% { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(0, 168, 132, 0); } 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 168, 132, 0); } }
     </style>
 </head>
 <body>
 
-    <div class="permission-status" id="permission-status" style="display: none;"></div>
-
     <div class="header">
-        <div class="logo">NEON<span style="color:var(--neon-pink)">CHAT</span></div>
-        <div class="my-profile-chip glass-panel" onclick="openProfileModal()">
-            <img src="" id="disp-my-avatar" class="my-avatar-tiny" onerror="this.src='https://cdn-icons-png.flaticon.com/512/149/149071.png'">
-            <div id="disp-my-name" style="font-weight: 500;">Set Profile</div>
-        </div>
+        <span>WhatsApp Call</span>
+        <i class="material-icons" onclick="reqNotify()" style="cursor:pointer;">notifications</i>
     </div>
 
-    <div id="home-screen" class="screen">
-        <h1 class="hero-text">Meet Strangers.<br>Randomly.</h1>
-        <p class="hero-sub">Click below to connect with someone unknown.</p>
-        
-        <div id="secure-context-warning" class="warning-box" style="display: none;">
-            <strong>🚫 Camera/Mic काम नहीं करेगा!</strong><br>
-            <small>Local server चालू करें: <code>python -m http.server 8000</code><br>फिर <code>http://localhost:8000</code> खोलें।
+    <div class="profile-summary" onclick="openProfileModal()">
+        <img src="" id="disp-my-avatar" class="my-avatar-small" onerror="this.src='https://cdn-icons-png.flaticon.com/512/149/149071.png'">
+        <div style="text-align: left;">
+            <div id="disp-my-name" style="font-weight: bold; font-size: 18px;">Set Your Profile</div>
+            <div style="font-size: 12px; color: var(--accent-color);">Mobile: <span id="disp-my-id">...</span></div>
         </div>
-        
-        <button class="btn-neon" id="start-btn" onclick="startSearching()">START CHAT</button>
-        <div style="margin-top: 20px; font-size: 14px; color: var(--text-secondary);">
-            <div>Your ID: <strong id="my-id-display"></strong></div>
-        </div>
+        <div style="flex:1; text-align: right;"><i class="material-icons" style="color: #00a884;">edit</i></div>
     </div>
 
-    <div id="searching-screen" class="screen">
-        <div class="radar-container">
-            <div class="radar-circles"></div>
-            <div class="radar-scanner"></div>
-        </div>
-        <div class="searching-text" id="search-status">Checking Camera & Mic...</div>
-        <p style="color: var(--text-secondary); margin-top: 20px;">This might take a moment.</p>
-        <button class="btn-neon pink" style="margin-top: 40px; padding: 10px 30px; font-size: 14px;" onclick="stopSearching()">CANCEL</button>
+    <div id="recent-list">
+        <div style="text-align: center; padding: 50px; color: #8696a0;">Tap + to call a number.</div>
     </div>
 
-    <div id="video-screen" class="screen">
-        <div class="partner-info-overlay glass-panel">
-            <img src="" id="partner-avatar" class="partner-avatar-large" onerror="this.src='https://cdn-icons-png.flaticon.com/512/149/149071.png'">
-            <div>
-                <div id="partner-name" style="font-weight: bold; font-size: 18px; font-family: 'Orbitron', sans-serif;">Unknown</div>
-                <div style="font-size: 12px; color: var(--neon-cyan);">Connected</div>
-            </div>
-        </div>
-
-        <video id="remote-video" autoplay playsinline muted></video>
-        <video id="local-video" autoplay muted playsinline></video>
-        
-        <div class="video-controls">
-            <button class="control-btn btn-stop" onclick="stopCurrentCall()"><i class="material-icons">stop</i></button>
-            <button class="control-btn btn-next" onclick="nextStranger()">Iske Aage →</button>
-        </div>
-    </div>
+    <div class="fab" onclick="openDialer()"><i class="material-icons">add_call</i></div>
 
     <div id="profile-modal" class="modal-overlay">
-        <div class="modal-box glass-panel">
-            <h3 style="font-family: 'Orbitron', sans-serif; margin-bottom: 20px;">Setup Identity</h3>
-            <img id="preview-avatar" class="avatar-preview" src="https://cdn-icons-png.flaticon.com/512/149/149071.png">
+        <div class="modal-box">
+            <h3>Profile Setup</h3>
             
-            <label for="file-upload" class="btn-neon" style="padding: 8px 20px; font-size: 12px; margin-bottom: 20px;">Choose Photo</label>
+            <img id="preview-avatar" class="avatar-preview-box" src="https://cdn-icons-png.flaticon.com/512/149/149071.png">
+            <label for="file-upload" class="file-label"><i class="material-icons" style="font-size:16px; vertical-align:middle;">photo_camera</i> Choose Photo</label>
             <input type="file" id="file-upload" accept="image/*" style="display:none" onchange="handleImageUpload(this)">
             
-            <input type="text" id="input-name" class="neon-input" placeholder="Enter Alias / Name">
-            
-            <div style="margin-top: 20px; display: flex; gap: 10px;">
-                <button class="btn-neon pink" style="padding: 10px 30px;" onclick="closeProfileModal()">Close</button>
-                <button class="btn-neon" style="padding: 10px 30px;" onclick="saveProfile()">Save</button>
+            <input type="text" id="input-name" placeholder="Enter Your Name">
+            <input type="number" id="input-custom-id" placeholder="Enter Mobile Number">
+            <p style="font-size:11px; color:#777;">Note: App will reload when number changes.</p>
+            <div>
+                <button class="modal-btn btn-cancel" onclick="closeProfileModal()">Cancel</button>
+                <button class="modal-btn btn-primary" onclick="saveProfile()">Save</button>
             </div>
         </div>
+    </div>
+
+    <div id="dial-modal" class="modal-overlay">
+        <div class="modal-box">
+            <h3>Start Call</h3>
+            <input type="number" id="input-partner-id" placeholder="Enter Partner Mobile No.">
+            <div>
+                <button class="modal-btn btn-cancel" onclick="closeDialer()">Cancel</button>
+                <button class="modal-btn btn-primary" onclick="dialFromInput()">Call</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="incoming-screen">
+        <img src="" id="inc-avatar" class="avatar-large" onerror="this.src='https://cdn-icons-png.flaticon.com/512/149/149071.png'">
+        <h2 id="inc-name">Unknown</h2>
+        <p id="inc-id" style="color: #8696a0;">WhatsApp Video Call</p>
+        <div style="display: flex; gap: 50px; margin-top: 50px;">
+            <button class="ctrl-btn btn-end" onclick="rejectCall()"><i class="material-icons">call_end</i></button>
+            <button class="ctrl-btn" style="background: #00a884;" onclick="acceptCall()"><i class="material-icons">videocam</i></button>
+        </div>
+    </div>
+
+    <div id="video-screen">
+        <video id="remote-video" autoplay playsinline></video>
+        <video id="local-video" autoplay muted playsinline></video>
+        <div class="controls"><button class="ctrl-btn btn-end" onclick="endCall()"><i class="material-icons">call_end</i></button></div>
     </div>
 
     <script>
-    // --- CONFIGURATION & STATE ---
-    const DEFAULT_AVATAR = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
-    let tempAvatarData = DEFAULT_AVATAR;
-    
-    // Generate a random 4-digit ID for self
-    const myID = Math.floor(1000 + Math.random() * 9000).toString();
-    
-    let myProfile = JSON.parse(localStorage.getItem('neon_profile')) || {
-        name: 'Stranger ' + myID.substring(0,2),
-        avatar: DEFAULT_AVATAR
-    };
+        // --- CONFIGURATION ---
+        const DEFAULT_AVATAR = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+        let tempAvatarData = DEFAULT_AVATAR; // Holds the base64 string temporarily
 
-    let peer = null;
-    let currentCall = null;
-    let localStream = null;
-    let isSearching = false;
-    let searchInterval = null;
+        let myProfile = JSON.parse(localStorage.getItem('wa_profile')) || {
+            name: 'New User',
+            avatar: DEFAULT_AVATAR,
+            id: Math.floor(100000 + Math.random() * 900000).toString() // Temp random ID until set
+        };
 
-    // --- INITIALIZATION ---
-    initUI();
-    checkSecureContext();
-    initPeer();
-
-    function initUI() {
+        // UI Initialization
         document.getElementById('disp-my-name').innerText = myProfile.name;
+        document.getElementById('disp-my-id').innerText = myProfile.id;
         document.getElementById('disp-my-avatar').src = myProfile.avatar;
         document.getElementById('preview-avatar').src = myProfile.avatar;
-        document.getElementById('my-id-display').innerText = myID;
-    }
+        tempAvatarData = myProfile.avatar;
 
-    function checkSecureContext() {
-        const statusEl = document.getElementById('permission-status');
-        const warningEl = document.getElementById('secure-context-warning');
-        const startBtn = document.getElementById('start-btn');
-        
-        if (!window.isSecureContext) {
-            statusEl.textContent = '🚫 file:// BLOCKED';
-            statusEl.className = 'permission-status status-denied';
-            statusEl.style.display = 'block';
-            warningEl.style.display = 'block';
-            startBtn.disabled = true;
-            startBtn.innerHTML = '🚫 LOCAL FILE - USE SERVER';
-            console.error('🚫 getUserMedia requires secure context (localhost/HTTPS)');
-            return false;
-        }
-        
-        statusEl.textContent = '✅ Secure Context OK';
-        statusEl.className = 'permission-status status-granted';
-        statusEl.style.display = 'block';
-        return true;
-    }
+        // PeerJS Setup
+        const peer = new Peer(myProfile.id, { config: { iceServers: [ { urls: 'stun:stun.l.google.com:19302' } ] } });
+        let currentCall = null;
+        let localStream = null;
+        let callHistory = JSON.parse(localStorage.getItem('wa_history_v2')) || [];
 
-    async function requestMediaPermissions() {
-        try {
-            // Check permission status first
-            if ('permissions' in navigator) {
-                const cameraPermission = await navigator.permissions.query({name: 'camera'});
-                const micPermission = await navigator.permissions.query({name: 'microphone'});
-                
-                if (cameraPermission.state === 'denied' || micPermission.state === 'denied') {
-                    throw new Error('Permission denied in settings');
-                }
-            }
-
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: {
-                    width: { ideal: 640 },
-                    height: { ideal: 480 },
-                    facingMode: 'user'
-                },
-                audio: true
-            });
-
-            updatePermissionStatus('✅ Camera & Mic Granted');
-            return stream;
-            
-        } catch (err) {
-            console.error('Media permission error:', err);
-            updatePermissionStatus('❌ Permission Denied');
-            
-            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                alert(`🛑 CAMERA/MIC PERMISSION REQUIRED!
-
-1️⃣ Chrome Settings → Privacy → Site Settings → Camera/Microphone
-2️⃣ "${location.origin}" को ALLOW करें
-3️⃣ Page refresh करें`);
-            } else if (err.name === 'NotFoundError') {
-                alert('❌ No camera/microphone found on device');
-            } else if (err.name === 'NotReadableError') {
-                alert('❌ Camera/Microphone in use by another app');
-            } else {
-                alert(`❌ Media Error: ${err.name}
-Check Console (F12)`);
-            }
-            
-            throw err;
-        }
-    }
-
-    function updatePermissionStatus(status) {
-        const el = document.getElementById('permission-status');
-        el.textContent = status;
-        el.className = status.includes('✅') ? 'permission-status status-granted' : 
-                       status.includes('❌') ? 'permission-status status-denied' : 
-                       'permission-status status-pending';
-    }
-
-    function initPeer() {
-        peer = new Peer(myID, { 
-            config: { 
-                iceServers: [
-                    { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' }
-                ] 
-            } 
-        });
-        
+        // --- PEER EVENTS ---
         peer.on('open', (id) => { 
-            console.log('✅ PeerJS Connected. My ID:', id); 
-        });
-        
-        peer.on('error', (err) => { 
-            console.error('PeerJS Error:', err);
-            if(isSearching && err.type === 'peer-unavailable') {
-                // Expected when dialing random peers
-                return;
-            }
-            if(err.type !== 'peer-unavailable') {
-                alert("🌐 Connection Error. Retrying...");
-            }
-        });
-
-        peer.on('call', (call) => {
-            console.log('📞 Incoming call from:', call.peer);
-            if (isSearching || !currentCall) {
-                stopSearchingInterval(); 
-                acceptCall(call);
-            } else {
-                call.close();
-            }
+            console.log("Connected as: " + id); 
+            renderHistory(); 
         });
 
         peer.on('connection', (conn) => {
-            conn.on('open', () => {
-                conn.send({ type: 'profile', name: myProfile.name, avatar: myProfile.avatar });
-            });
             conn.on('data', (data) => {
-                if(data.type === 'profile') {
-                    document.getElementById('partner-name').innerText = data.name;
-                    document.getElementById('partner-avatar').src = data.avatar;
+                if(data.type === 'profile_info') {
+                    document.getElementById('inc-name').innerText = data.name;
+                    document.getElementById('inc-avatar').src = data.avatar;
+                    updateHistoryContact(conn.peer, data.name, data.avatar, true); 
                 }
             });
         });
-    }
 
-    // --- FIXED SEARCHING LOGIC ---
-    async function startSearching() {
-        if(isSearching) return;
-        
-        // Show searching screen immediately
-        isSearching = true;
-        showScreen('searching-screen');
-        document.getElementById('search-status').innerText = "🔐 Requesting Camera & Mic...";
-        
-        try {
-            // Get media stream FIRST
-            localStream = await requestMediaPermissions();
-            document.getElementById('local-video').srcObject = localStream;
-            
-            // Now start peer searching
-            document.getElementById('search-status').innerText = "Scanning for strangers...";
-            startSearchingLoop();
-            
-        } catch (err) {
-            console.error('Start search failed:', err);
-            stopSearching();
-        }
-    }
+        peer.on('call', (call) => {
+            currentCall = call;
+            document.getElementById('incoming-screen').style.display = 'flex';
+            document.getElementById('inc-id').innerText = "Mobile: " + call.peer;
+            document.getElementById('inc-name').innerText = "Incoming Call..."; 
+            showNotification(call.peer);
+        });
 
-    function startSearchingLoop() {
-        let attemptCount = 0;
-        searchInterval = setInterval(() => {
-            attemptCount++;
-            document.getElementById('search-status').innerText = `Dialing... (${attemptCount})`;
-            
-            let randomTarget;
-            do {
-                randomTarget = Math.floor(1000 + Math.random() * 9000).toString();
-            } while (randomTarget === myID);
+        peer.on('error', (err) => alert("Connection Error: Check internet or ID"));
 
-            console.log(`📱 Calling ${randomTarget}...`);
-            const call = peer.call(randomTarget, localStream);
-            
-            // Cleanup timeout
-            setTimeout(() => {
-                if(call && !call.open && currentCall !== call) {
-                    call.close();
+        // --- IMAGE PROCESSING (COMPRESS TO BASE64) ---
+        function handleImageUpload(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    // Create an image to resize it (Canvas)
+                    const img = new Image();
+                    img.src = e.target.result;
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        // Resize to max 150px to keep storage low
+                        const MAX_SIZE = 150; 
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > height) {
+                            if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
+                        } else {
+                            if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
+                        }
+                        canvas.width = width;
+                        canvas.height = height;
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        // Get compressed Base64
+                        tempAvatarData = canvas.toDataURL('image/jpeg', 0.7);
+                        document.getElementById('preview-avatar').src = tempAvatarData;
+                    }
                 }
-            }, 2000);
-
-        }, 2000);
-    }
-
-    function stopSearching() {
-        isSearching = false;
-        stopSearchingInterval();
-        showScreen('home-screen');
-        if(localStream) {
-            localStream.getTracks().forEach(track => track.stop());
-            localStream = null;
-            document.getElementById('local-video').srcObject = null;
+                reader.readAsDataURL(input.files[0]);
+            }
         }
-    }
 
-    function stopSearchingInterval() {
-        if(searchInterval) {
-            clearInterval(searchInterval);
-            searchInterval = null;
+        // --- PROFILE MANAGEMENT ---
+        function openProfileModal() {
+            document.getElementById('input-name').value = myProfile.name;
+            document.getElementById('input-custom-id').value = myProfile.id;
+            document.getElementById('preview-avatar').src = myProfile.avatar;
+            document.getElementById('profile-modal').style.display = 'flex';
         }
-    }
-
-    function acceptCall(call) {
-        isSearching = false;
-        currentCall = call;
-        showScreen('video-screen');
-
-        document.getElementById('partner-name').innerText = "Connecting...";
-        document.getElementById('partner-avatar').src = DEFAULT_AVATAR;
+        function closeProfileModal() { document.getElementById('profile-modal').style.display = 'none'; }
         
-        // Send profile
-        const conn = peer.connect(call.peer);
-        conn.on('open', () => {
-            conn.send({ type: 'profile', name: myProfile.name, avatar: myProfile.avatar });
-        });
+        function saveProfile() {
+            const newName = document.getElementById('input-name').value;
+            const newId = document.getElementById('input-custom-id').value;
+            
+            if(newName && newId) {
+                const oldId = myProfile.id;
+                myProfile.name = newName;
+                myProfile.avatar = tempAvatarData; // Save the base64 string
+                myProfile.id = newId;
 
-        // Answer call
-        if(localStream) {
-            call.answer(localStream);
-        } else {
-            // Emergency fallback
-            navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-                .then(stream => {
-                    localStream = stream;
-                    document.getElementById('local-video').srcObject = stream;
-                    call.answer(stream);
-                })
-                .catch(err => console.error('Fallback media failed:', err));
+                localStorage.setItem('wa_profile', JSON.stringify(myProfile));
+                
+                if(oldId !== newId) {
+                    location.reload(); // Reload to register new Mobile Number ID
+                } else {
+                    document.getElementById('disp-my-name').innerText = myProfile.name;
+                    document.getElementById('disp-my-avatar').src = myProfile.avatar;
+                    document.getElementById('disp-my-id').innerText = myProfile.id;
+                    closeProfileModal();
+                }
+            } else {
+                alert("Name and Mobile Number are required!");
+            }
         }
+
+        // --- CALL FUNCTIONS ---
+        function openDialer() { document.getElementById('dial-modal').style.display = 'flex'; }
+        function closeDialer() { document.getElementById('dial-modal').style.display = 'none'; }
         
-        call.on('stream', (remoteStream) => { 
-            document.getElementById('remote-video').srcObject = remoteStream; 
-        });
-        
-        call.on('close', handleCallDisconnect);
-        call.on('error', handleCallDisconnect);
-    }
-
-    function stopCurrentCall() {
-        if(currentCall) {
-            currentCall.close();
+        function dialFromInput() { 
+            const id = document.getElementById('input-partner-id').value; 
+            if(id) { closeDialer(); startCall(id); }
         }
-        handleCallDisconnect();
-    }
 
-    function nextStranger() {
-        stopCurrentCall();
-        setTimeout(startSearching, 800);
-    }
+        function startCall(partnerID) {
+            if(partnerID === myProfile.id) return alert("You cannot call your own number.");
+            
+            // Connect to send info
+            const conn = peer.connect(partnerID);
+            conn.on('open', () => {
+                conn.send({ type: 'profile_info', name: myProfile.name, avatar: myProfile.avatar });
+            });
 
-    function handleCallDisconnect() {
-        if(currentCall) {
-            currentCall.close();
-            currentCall = null;
+            document.getElementById('video-screen').style.display = 'block';
+            updateHistoryContact(partnerID, partnerID, DEFAULT_AVATAR, false);
+
+            navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((stream) => {
+                localStream = stream; document.getElementById('local-video').srcObject = stream;
+                const call = peer.call(partnerID, stream); 
+                currentCall = call;
+                call.on('stream', (remoteStream) => { document.getElementById('remote-video').srcObject = remoteStream; });
+                call.on('close', endCall);
+            }).catch(err => alert("Camera blocked or not found."));
         }
-        if(!isSearching) {
-            showScreen('home-screen');
-        }
-        console.log('📞 Call ended');
-    }
 
-    // --- UI HELPERS ---
-    function showScreen(screenId) {
-        ['home-screen', 'searching-screen', 'video-screen'].forEach(id => {
-            const el = document.getElementById(id);
-            el.style.display = (id === screenId) ? 'flex' : 'none';
-        });
-    }
+        function acceptCall() {
+            document.getElementById('incoming-screen').style.display = 'none';
+            document.getElementById('video-screen').style.display = 'block';
+            
+            const conn = peer.connect(currentCall.peer);
+            conn.on('open', () => {
+                conn.send({ type: 'profile_info', name: myProfile.name, avatar: myProfile.avatar });
+            });
 
-    // --- PROFILE HANDLING ---
-    function openProfileModal() { 
-        document.getElementById('input-name').value = myProfile.name; 
-        document.getElementById('preview-avatar').src = myProfile.avatar; 
-        document.getElementById('profile-modal').style.display = 'flex'; 
-    }
-    
-    function closeProfileModal() { 
-        document.getElementById('profile-modal').style.display = 'none'; 
-    }
-    
-    function handleImageUpload(input) { 
-        if (input.files && input.files[0]) { 
-            const reader = new FileReader(); 
-            reader.onload = function(e) { 
-                const img = new Image(); 
-                img.src = e.target.result; 
-                img.onload = function() { 
-                    const canvas = document.createElement('canvas'); 
-                    const ctx = canvas.getContext('2d'); 
-                    const MAX_SIZE = 150; 
-                    let width = img.width; 
-                    let height = img.height; 
-                    if (width > height) { 
-                        if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; } 
-                    } else { 
-                        if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; } 
-                    } 
-                    canvas.width = width; 
-                    canvas.height = height; 
-                    ctx.drawImage(img, 0, 0, width, height); 
-                    tempAvatarData = canvas.toDataURL('image/jpeg', 0.7); 
-                    document.getElementById('preview-avatar').src = tempAvatarData; 
-                }; 
-            }; 
-            reader.readAsDataURL(input.files[0]); 
-        } 
-    }
-    
-    function saveProfile() { 
-        const newName = document.getElementById('input-name').value.trim(); 
-        if(newName) { 
-            myProfile.name = newName; 
-            myProfile.avatar = tempAvatarData; 
-            localStorage.setItem('neon_profile', JSON.stringify(myProfile)); 
-            initUI(); 
-            closeProfileModal(); 
-        } else {
-            alert('Name required!');
+            navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((stream) => {
+                localStream = stream; document.getElementById('local-video').srcObject = stream;
+                currentCall.answer(stream);
+                currentCall.on('stream', (remoteStream) => { document.getElementById('remote-video').srcObject = remoteStream; });
+                currentCall.on('close', endCall);
+            });
         }
-    }
 
-    // Page visibility handling
-    document.addEventListener('visibilitychange', () => {
-        if (document.hidden && currentCall) {
-            stopCurrentCall();
+        function rejectCall() { if(currentCall) currentCall.close(); document.getElementById('incoming-screen').style.display = 'none'; }
+        function endCall() { if(currentCall) currentCall.close(); if(localStream) localStream.getTracks().forEach(t => t.stop()); document.getElementById('video-screen').style.display = 'none'; window.location.reload(); }
+
+        // --- UTILS ---
+        function reqNotify() {
+            if (!("Notification" in window)) return alert("Not supported.");
+            Notification.requestPermission().then(permission => { if (permission === "granted") alert("Notifications Enabled!"); });
         }
-    });
+        function showNotification(callerId) {
+            if (Notification.permission === "granted") {
+                new Notification("Incoming Call", { body: `Call from ${callerId}`, icon: 'https://cdn-icons-png.flaticon.com/512/724/724664.png' });
+            }
+        }
+
+        function updateHistoryContact(id, name, avatar, isOnline) {
+            const index = callHistory.findIndex(i => i.id === id);
+            const entry = {
+                id: id,
+                name: (name === id) ? (index > -1 ? callHistory[index].name : id) : name,
+                avatar: (avatar === DEFAULT_AVATAR) ? (index > -1 ? callHistory[index].avatar : DEFAULT_AVATAR) : avatar,
+                time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                isOnline: isOnline
+            };
+            if(index > -1) callHistory.splice(index, 1);
+            callHistory.unshift(entry);
+            localStorage.setItem('wa_history_v2', JSON.stringify(callHistory));
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const list = document.getElementById('recent-list');
+            list.innerHTML = '';
+            if(callHistory.length === 0) return list.innerHTML = '<div style="text-align: center; padding: 50px; color: #8696a0;">Tap + to call a number.</div>';
+            
+            callHistory.forEach(item => {
+                const div = document.createElement('div'); div.className = 'call-item'; div.onclick = () => startCall(item.id);
+                div.innerHTML = `
+                    <img src="${item.avatar}" class="avatar-img" onerror="this.src='${DEFAULT_AVATAR}'">
+                    <div class="info">
+                        <div class="name-row"><div class="name">${item.name}</div></div>
+                        <div class="time"><span class="status-dot ${item.isOnline ? 'online' : ''}"></span>${item.isOnline ? 'Online' : item.time}</div>
+                    </div>
+                    <i class="material-icons call-icon">videocam</i>`;
+                list.appendChild(div);
+            });
+        }
     </script>
 </body>
 </html>
